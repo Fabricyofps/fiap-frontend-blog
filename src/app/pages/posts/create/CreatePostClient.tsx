@@ -56,7 +56,7 @@ const CreatePostPage: React.FC = () => {
 
       toast.success("Post criado com sucesso!");
       reset();
-      router.push(`/posts/${data._id || ""}`);
+      router.push(`/pages/home/`);
     } catch (err: any) {
       toast.error(err.message || "Erro ao criar post");
     } finally {
