@@ -29,6 +29,7 @@
 
 ## 📂 Estrutura de Diretórios
 
+```
 ├── app/
 │ ├── api/ # Endpoints do frontend para proxy do backend
 │ │ ├── login/ # API route para login
@@ -65,6 +66,7 @@
 ├── tsconfig.json # TypeScript config
 ├── package.json
 └── .env # Variáveis de ambiente
+```
 
 ## 🛠️ Componentes
 
