@@ -1,10 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 export async function GET(
   request: Request,
-  context: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
-  const { params } = await context;
   const { postId } = await params;
   const authHeader = request.headers.get("authorization");
 
@@ -51,10 +50,10 @@ export async function GET(
 }
 
 export async function PUT(
-  request: Request,
-  context: { params: { postId: string } }
+  request: NextRequest,
+  { params }: { params: Promise<{ postId: string }> }
 ) {
-  const { postId } = await context.params;
+  const { postId } = await params;
   const authHeader = request.headers.get("authorization");
 
   if (!authHeader) {
@@ -78,8 +77,13 @@ export async function PUT(
     const isJSON = contentType?.includes("application/json");
 
     if (!res.ok) {
-      const errorMsg = isJSON ? (await res.json()).message : await res.text();
-      return NextResponse.json({ message: errorMsg }, { status: res.status });
+      const errorData = isJSON
+        ? await res.json()
+        : { message: await res.text() };
+      return NextResponse.json(
+        { message: errorData.message || "Erro ao atualizar" },
+        { status: res.status }
+      );
     }
 
     const data = isJSON ? await res.json() : { message: "Post atualizado" };
@@ -95,9 +99,8 @@ export async function PUT(
 
 export async function DELETE(
   request: Request,
-  context: { params: { postId: string } }
+  { params }: { params: Promise<{ postId: string }> }
 ) {
-  const { params } = context;
   const { postId } = await params;
   const authHeader = request.headers.get("authorization");
 
@@ -119,8 +122,13 @@ export async function DELETE(
     const isJSON = contentType && contentType.includes("application/json");
 
     if (!res.ok) {
-      const errorMsg = isJSON ? (await res.json()).message : await res.text();
-      return NextResponse.json({ message: errorMsg }, { status: res.status });
+      const errorData = isJSON
+        ? await res.json()
+        : { message: await res.text() };
+      return NextResponse.json(
+        { message: errorData.message || "Erro ao deletar" },
+        { status: res.status }
+      );
     }
 
     const data = isJSON ? await res.json() : { message: "Post deletado" };
