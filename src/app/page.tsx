@@ -1,103 +1,315 @@
+"use client";
+
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+import React, { useEffect, useState } from "react";
+import { useForm, FieldValues, SubmitHandler } from "react-hook-form";
+import { toast } from "react-hot-toast";
+import { AiOutlineLogin, AiOutlineUser } from "react-icons/ai";
+import Input from "./components/Input/Input";
+import Button from "./components/Button/Button";
+import { useAuth, useAuthStore } from "./libs/stores/AuthStore";
+import { useAuthTimeout } from "./hooks/useAuthTimeout";
+import SelectInput from "./components/SelectInput/SelectInput";
+
+const AuthPage: React.FC = () => {
+  useAuthTimeout();
+
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
+
+  const { isAuthenticated } = useAuth();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      router.replace("/pages/home");
+    }
+  }, [isAuthenticated, router]);
+
+  const {
+    register: registerLogin,
+    handleSubmit: handleSubmitLogin,
+    formState: { errors: errorsLogin },
+  } = useForm<FieldValues>({
+    defaultValues: {
+      usuario: "",
+      senha: "",
+    },
+  });
+
+  const onSubmitLogin: SubmitHandler<FieldValues> = async (data) => {
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("api/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.senha,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Usuário ou credenciais inválidas!");
+      }
+
+      const result = await response.json();
+      const { access_token } = result;
+
+      if (!access_token) {
+        throw new Error("Token não recebido");
+      }
+
+      useAuthStore.getState().login(access_token);
+
+      toast.success("Login realizado com sucesso!");
+
+      router.push("/pages/home");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro no login");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const {
+    register: registerRegister,
+    handleSubmit: handleSubmitRegister,
+    watch: watchRegister,
+    formState: { errors: errorsRegister },
+  } = useForm<FieldValues>({
+    defaultValues: {
+      nome: "",
+      email: "",
+      senha: "",
+      confirmaSenha: "",
+    },
+  });
+
+  const senha = watchRegister("senha");
+
+  const onSubmitRegister: SubmitHandler<FieldValues> = async (data) => {
+    if (data.senha !== data.confirmaSenha) {
+      toast.error("As senhas não coincidem!");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.senha,
+          role: data.role,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Erro ao criar conta");
+      }
+
+      toast.success("Cadastro realizado com sucesso!");
+      setIsRegister(false);
+      router.push("/");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro no cadastro");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const title = isRegister ? "Cadastro" : "Login";
+  const subtitle = isRegister
+    ? "Crie sua conta para acessar o sistema!"
+    : "Bem-vindo, entre com seus dados para acessar o sistema!";
+  const buttonLabel = isRegister ? "Cadastrar" : "Login";
+  const buttonIcon = isRegister ? AiOutlineUser : AiOutlineLogin;
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="w-full min-h-screen flex flex-col md:flex-row">
+      {" "}
+      <div className="relative w-full md:w-1/2 h-64 md:h-screen flex flex-col">
+        <div className="absolute inset-0 flex flex-col justify-center md:justify-start md:pt-[20%] px-4 md:px-8 md:pl-10">
+          <div className="flex flex-col items-start md:items-start">
+            <h1 className="text-4xl sm:text-5xl md:text-6xl text-white font-extrabold my-2 md:my-4">
+              FRONT BLOG
+            </h1>
+            <p className="text-xl sm:text-2xl text-white">
+              Blog dinâmico estudantil
+            </p>
+          </div>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+          <footer className="absolute bottom-4 left-0 right-0 md:left-auto md:w-1/2 p-2 md:p-4 flex justify-center md:justify-start">
+            <p className="text-center md:text-left text-sm md:text-base text-white">
+              &copy; FRONT BLOG {new Date().getFullYear()}
+            </p>
+          </footer>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
+
+        <Image
+          src="/static/images/bg_login.jpg"
+          alt="Login_Background"
+          loading="eager"
+          priority={true}
+          width={1920}
+          height={1080}
+          className="w-full h-full object-cover"
+          style={{ height: "100%" }}
+        />
+      </div>
+      <div className="w-full md:w-1/2 h-auto md:h-screen flex flex-col p-4 sm:p-6 md:p-20 justify-center bg-white gap-6 md:gap-8">
+        <div className="w-full flex items-center justify-center p-4 sm:p-8 md:p-12 lg:p-16">
           <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+            src="/static/images/logo.png"
+            alt="Logo"
+            width={200}
+            height={200}
+            loading="eager"
+            priority={true}
+            className="w-3/5 sm:w-1/2 md:w-2/5 h-auto object-contain"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+
+        <div className="w-full flex flex-col mb-4 md:mb-2">
+          <h3 className="text-2xl sm:text-3xl md:text-4xl font-semibold mb-2 text-black">
+            {title}
+          </h3>
+          <p className="text-base sm:text-lg md:text-xl mb-2 text-black">
+            {subtitle}
+          </p>
+        </div>
+
+        {isRegister ? (
+          <form
+            onSubmit={handleSubmitRegister(onSubmitRegister)}
+            className="w-full flex flex-col gap-4"
+          >
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              disabled={isLoading}
+              register={registerRegister}
+              errors={errorsRegister}
+              required
+            />
+            <Input
+              id="senha"
+              label="Senha"
+              type="password"
+              disabled={isLoading}
+              register={registerRegister}
+              errors={errorsRegister}
+              required
+            />
+            <Input
+              id="confirmaSenha"
+              label="Confirme a Senha"
+              type="password"
+              disabled={isLoading}
+              register={registerRegister}
+              errors={errorsRegister}
+              required
+              {...registerRegister("confirmaSenha", {
+                validate: (value) =>
+                  value === senha || "As senhas não coincidem",
+              })}
+            />
+
+            <SelectInput
+              id="role"
+              label="Tipo de Usuário"
+              disabled={isLoading}
+              register={registerRegister}
+              errors={errorsRegister}
+              required
+              options={[
+                { value: "aluno", label: "Aluno" },
+                { value: "professor", label: "Professor" },
+              ]}
+            />
+
+            <div className="w-full flex flex-col my-8 md:my-10">
+              <Button
+                label={buttonLabel}
+                icon={buttonIcon}
+                onClick={() => ""}
+                disabled={isLoading}
+              />
+            </div>
+          </form>
+        ) : (
+          <form
+            onSubmit={handleSubmitLogin(onSubmitLogin)}
+            className="w-full flex flex-col gap-4"
+          >
+            <Input
+              id="email"
+              label="E-mail"
+              type="text"
+              disabled={isLoading}
+              register={registerLogin}
+              errors={errorsLogin}
+              required
+            />
+            <Input
+              id="senha"
+              label="Senha"
+              type="password"
+              disabled={isLoading}
+              register={registerLogin}
+              errors={errorsLogin}
+              required
+            />
+
+            <div className="w-full flex flex-col my-8 md:my-10">
+              <Button
+                label={buttonLabel}
+                icon={buttonIcon}
+                onClick={() => ""}
+                disabled={isLoading}
+              />
+            </div>
+          </form>
+        )}
+
+        <div className="w-full flex items-center justify-center pt-4">
+          {isRegister ? (
+            <p className="text-xs sm:text-sm font-normal text-neutral-800 text-center">
+              Já possui conta?{" "}
+              <span
+                className="font-semibold underline underline-offset-2 cursor-pointer text-rose-500"
+                onClick={() => setIsRegister(false)}
+              >
+                Faça login.
+              </span>
+            </p>
+          ) : (
+            <p className="text-xs sm:text-sm font-normal text-neutral-800 text-center">
+              Não possui conta?{" "}
+              <span
+                className="font-semibold underline underline-offset-2 cursor-pointer text-rose-500"
+                onClick={() => setIsRegister(true)}
+              >
+                Criar uma.
+              </span>
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default AuthPage;
